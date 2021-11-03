@@ -10,6 +10,8 @@ fonte = pygame.font.SysFont('arial', 24, True, False)
 AMARELO = (255, 255, 0)
 PRETO = (0, 0, 0)
 AZUL = (0, 0, 255)
+VERMELHO = (255, 0, 0)
+BRANCO = (255, 255, 255)
 VELOCIDADE = 1
 
 
@@ -164,9 +166,52 @@ class Pacman(ElementoJogo):
         self.coluna = self.coluna_intencao
 
 
+class Fantasma(ElementoJogo):
+    def __init__(self, cor, tamanho):
+        self.coluna = 6.0
+        self.linha = 8.0
+        self.tamanho = tamanho
+        self.cor = cor
+
+    def pintar(self, tela):
+        fatia = self.tamanho // 8
+        px = int(self.coluna * self.tamanho)
+        py = int(self.linha * self.tamanho)
+        contorno = [(px, py + self.tamanho),
+                    (px + fatia , py + fatia * 2),
+                    (px + fatia * 3, py + fatia // 2),
+                    (px + fatia * 3, py),
+                    (px + fatia * 5, py),
+                    (px + fatia * 6, py + fatia // 2),
+                    (px + fatia * 7, py + fatia * 2),
+                    (px + self.tamanho, py + self.tamanho)]
+        pygame.draw.polygon(tela, self.cor, contorno, 0)
+
+        olho_raio_ext = fatia
+        olho_raio_int = fatia // 2
+
+        olho_e_x = int(px + fatia * 2.5)
+        olho_e_y = int(py + fatia * 2.5)
+
+        olho_d_x = int(px + fatia * 5.5)
+        olho_d_y = int(py + fatia * 2.5)
+
+        pygame.draw.circle(tela, BRANCO, (olho_e_x, olho_e_y), olho_raio_ext, 0)
+        pygame.draw.circle(tela, PRETO, (olho_e_x, olho_e_y), olho_raio_int, 0)
+        pygame.draw.circle(tela, BRANCO, (olho_d_x, olho_d_y), olho_raio_ext, 0)
+        pygame.draw.circle(tela, PRETO, (olho_d_x, olho_d_y), olho_raio_int, 0)
+
+    def calcular_regras(self):
+        pass
+
+    def processar_eventos(self, evts):
+        pass
+
+
 if __name__ == "__main__":
     size = 600 // 30
     pacman = Pacman(size)
+    blinky = Fantasma(VERMELHO, size)
     cenario = Cenario(size, pacman)
 
     while True:
@@ -178,10 +223,11 @@ if __name__ == "__main__":
         screen.fill(PRETO)
         cenario.pintar(screen)
         pacman.pintar(screen)
-        pygame.display.update()
-        pygame.time.delay(100)
+        blinky.pintar(screen)
 
         # Captura os eventos
         eventos = pygame.event.get()
         cenario.processar_eventos(eventos)
         pacman.processar_eventos(eventos)
+        pygame.display.update()
+        pygame.time.delay(100)
