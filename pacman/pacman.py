@@ -56,6 +56,8 @@ class Cenario(ElementoJogo):
         self.pacman = pac
         self.moviveis = []
         self.tamanho = tamanho
+        # Estados 0-Jogando 1-Pausado 2-GameOverse 3-Vitoria
+        self.estado = 0
         self.pontos = 0
         self.matriz = [
             [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
@@ -110,9 +112,37 @@ class Cenario(ElementoJogo):
                 pygame.draw.circle(tela, AMARELO, (x + half, y + half), self.tamanho // 10, 0)
 
     def pintar(self, tela):
+        if self.estado == 0:
+            self.pintar_jogando(tela)
+        elif self.estado == 1:
+            self.pintar_jogando(tela)
+            self.pintar_pausado(tela)
+        elif self.estado == 2:
+            self.pintar_jogando(tela)
+            self.pintar_gameover(tela)
+        elif self.estado == 3:
+            self.pintar_jogando(tela)
+            self.pintar_vitoria(tela)
+
+    def pintar_jogando(self, tela):
         for numero_linha, linha in enumerate(self.matriz):
             self.pintar_linha(tela, numero_linha, linha)
         self.pintar_pontos(tela)
+
+    def pintar_texto_centro(self, tela, texto):
+        texto_img = fonte.render(texto, True, AMARELO)
+        texto_x = (tela.get_width() - texto_img.get_width()) // 2
+        texto_y = (tela.get_height() - texto_img.get_height()) // 2
+        tela.blit(texto_img, (texto_x, texto_y))
+
+    def pintar_pausado(self, tela):
+        self.pintar_texto_centro(tela, 'P A U S A D O')
+
+    def pintar_gameover(self, tela):
+        self.pintar_texto_centro(tela, 'G A M E  O V E R')
+
+    def pintar_vitoria(self, tela):
+        self.pintar_texto_centro(tela, 'P A R A B E N S  V O C E  V E N C E U  ! ! !')
 
     def get_direcoes(self, linha, coluna):
         direcoes = []
@@ -127,6 +157,14 @@ class Cenario(ElementoJogo):
         return direcoes
 
     def calcular_regras(self):
+        if self.estado == 0:
+            self.calcular_regras_jogando()
+        elif self.estado == 1:
+            self.calcular_regras_pausado()
+        elif self.estado == 2:
+            self.calcular_regras_gameover()
+
+    def calcular_regras_jogando(self):
         for movivel in self.moviveis:
             lin = int(movivel.linha)
             col = int(movivel.coluna)
@@ -135,19 +173,36 @@ class Cenario(ElementoJogo):
             direcoes = self.get_direcoes(lin, col)
             if len(direcoes) >= 3:
                 movivel.esquina(direcoes)
-            if 0 <= col_intencao < 28 and 0 <= lin_intencao < 29 and self.matriz[lin_intencao][col_intencao] != 2:
-                movivel.aceitar_movimento()
-                if isinstance(movivel, Pacman) and self.matriz[lin][col] == 1:
-                    self.pontos += 1
-                    self.matriz[lin][col] = 0
-
+            if isinstance(movivel, Fantasma) and movivel.linha == self.pacman.linha and movivel.coluna == self.pacman.coluna:
+                self.estado = 2
             else:
-                movivel.recusar_movimento(direcoes)
+                if 0 <= col_intencao < 28 and 0 <= lin_intencao < 29 and self.matriz[lin_intencao][col_intencao] != 2:
+                    movivel.aceitar_movimento()
+                    if isinstance(movivel, Pacman) and self.matriz[lin][col] == 1:
+                        self.pontos += 1
+                        self.matriz[lin][col] = 0
+                        if self.pontos >= 306:
+                            self.estado = 3
+
+                else:
+                    movivel.recusar_movimento(direcoes)
+
+    def calcular_regras_pausado(self):
+        pass
+
+    def calcular_regras_gameover(self):
+        pass
 
     def processar_eventos(self, evts):
         for e in evts:
             if e.type == pygame.QUIT:
                 exit()
+            if e.type == pygame.KEYDOWN:
+                if e.key == pygame.K_p:
+                    if self.estado == 0:
+                        self.estado = 1
+                    else:
+                        self.estado = 0
 
 
 class Pacman(ElementoJogo, Movivel):
@@ -221,8 +276,8 @@ class Pacman(ElementoJogo, Movivel):
 
 class Fantasma(ElementoJogo):
     def __init__(self, cor, tamanho):
-        self.coluna = 6.0
-        self.linha = 2.0
+        self.coluna = 13.0
+        self.linha = 15.0
         self.linha_intencao = self.linha
         self.coluna_intencao = self.coluna
         self.velocidade = 1
