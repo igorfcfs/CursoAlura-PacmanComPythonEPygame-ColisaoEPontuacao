@@ -1,12 +1,11 @@
 import pygame
-from abc import ABCMeta, abstractmethod, ABC
+from abc import ABCMeta, abstractmethod
 import random
 
 pygame.init()
 
 screen = pygame.display.set_mode((800, 600), 0)
-
-fonte = pygame.font.SysFont('arial', 24, True, False)
+font = pygame.font.SysFont("arial", 20, True, False)
 
 AMARELO = (255, 255, 0)
 PRETO = (0, 0, 0)
@@ -17,7 +16,7 @@ LARANJA = (255, 140, 0)
 ROSA = (255, 15, 192)
 CIANO = (0, 255, 255)
 VELOCIDADE = 1
-ACMIMA = 1
+ACIMA = 1
 ABAIXO = 2
 DIREITA = 3
 ESQUERDA = 4
@@ -55,10 +54,11 @@ class Cenario(ElementoJogo):
     def __init__(self, tamanho, pac):
         self.pacman = pac
         self.moviveis = []
-        self.tamanho = tamanho
-        # Estados 0-Jogando 1-Pausado 2-GameOverse 3-Vitoria
-        self.estado = 0
         self.pontos = 0
+        # Estados possiveis 0-Jogando 1-Pausado 2-GameOver  3-Vitoria
+        self.estado = 0
+        self.tamanho = tamanho
+        self.vidas = 5
         self.matriz = [
             [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
             [2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2],
@@ -94,10 +94,12 @@ class Cenario(ElementoJogo):
     def adicionar_movivel(self, obj):
         self.moviveis.append(obj)
 
-    def pintar_pontos(self, tela):
-        pontos_x = 30 * self.tamanho
-        img_pontos = fonte.render(f'Score: {self.pontos}', True, AMARELO)
-        tela.blit(img_pontos, (pontos_x, 50))
+    def pintar_score(self, tela):
+        pontos_x = self.tamanho * 30
+        pontos_img = font.render("Score {}".format(self.pontos), True, AMARELO)
+        vidas_img = font.render("Vidas {}".format(self.vidas), True, AMARELO)
+        tela.blit(pontos_img, (pontos_x, 50))
+        tela.blit(vidas_img, (pontos_x, 100))
 
     def pintar_linha(self, tela, numero_linha, linha):
         for numero_coluna, coluna in enumerate(linha):
@@ -109,7 +111,8 @@ class Cenario(ElementoJogo):
                 cor = AZUL
             pygame.draw.rect(tela, cor, (x, y, self.tamanho, self.tamanho), 0)
             if coluna == 1:
-                pygame.draw.circle(tela, AMARELO, (x + half, y + half), self.tamanho // 10, 0)
+                pygame.draw.circle(tela, AMARELO, (x + half, y + half),
+                                   self.tamanho // 10, 0)
 
     def pintar(self, tela):
         if self.estado == 0:
@@ -124,30 +127,30 @@ class Cenario(ElementoJogo):
             self.pintar_jogando(tela)
             self.pintar_vitoria(tela)
 
-    def pintar_jogando(self, tela):
-        for numero_linha, linha in enumerate(self.matriz):
-            self.pintar_linha(tela, numero_linha, linha)
-        self.pintar_pontos(tela)
-
     def pintar_texto_centro(self, tela, texto):
-        texto_img = fonte.render(texto, True, AMARELO)
+        texto_img = font.render(texto, True, AMARELO)
         texto_x = (tela.get_width() - texto_img.get_width()) // 2
         texto_y = (tela.get_height() - texto_img.get_height()) // 2
         tela.blit(texto_img, (texto_x, texto_y))
 
-    def pintar_pausado(self, tela):
-        self.pintar_texto_centro(tela, 'P A U S A D O')
+    def pintar_vitoria(self, tela):
+        self.pintar_texto_centro(tela, "P A R A B E N S  V O C E  V E N C E U  ! ! !")
 
     def pintar_gameover(self, tela):
-        self.pintar_texto_centro(tela, 'G A M E  O V E R')
+        self.pintar_texto_centro(tela, "G A M E   O V E R")
 
-    def pintar_vitoria(self, tela):
-        self.pintar_texto_centro(tela, 'P A R A B E N S  V O C E  V E N C E U  ! ! !')
+    def pintar_pausado(self, tela):
+        self.pintar_texto_centro(tela, "P A U S A D Os")
+
+    def pintar_jogando(self, tela):
+        for numero_linha, linha in enumerate(self.matriz):
+            self.pintar_linha(tela, numero_linha, linha)
+        self.pintar_score(tela)
 
     def get_direcoes(self, linha, coluna):
         direcoes = []
         if self.matriz[int(linha - 1)][int(coluna)] != 2:
-            direcoes.append(ACMIMA)
+            direcoes.append(ACIMA)
         if self.matriz[int(linha + 1)][int(coluna)] != 2:
             direcoes.append(ABAIXO)
         if self.matriz[int(linha)][int(coluna - 1)] != 2:
@@ -164,6 +167,12 @@ class Cenario(ElementoJogo):
         elif self.estado == 2:
             self.calcular_regras_gameover()
 
+    def calcular_regras_gameover(self):
+        pass
+
+    def calcular_regras_pausado(self):
+        pass
+
     def calcular_regras_jogando(self):
         for movivel in self.moviveis:
             lin = int(movivel.linha)
@@ -173,25 +182,25 @@ class Cenario(ElementoJogo):
             direcoes = self.get_direcoes(lin, col)
             if len(direcoes) >= 3:
                 movivel.esquina(direcoes)
-            if isinstance(movivel, Fantasma) and movivel.linha == self.pacman.linha and movivel.coluna == self.pacman.coluna:
-                self.estado = 2
+            if isinstance(movivel, Fantasma) and movivel.linha == self.pacman.linha and \
+                    movivel.coluna == self.pacman.coluna:
+                self.vidas -= 1
+                if self.vidas <= 0:
+                    self.estado = 2
+                else:
+                    self.pacman.linha = 1
+                    self.pacman.coluna = 1
             else:
-                if 0 <= col_intencao < 28 and 0 <= lin_intencao < 29 and self.matriz[lin_intencao][col_intencao] != 2:
+                if 0 <= col_intencao < 28 and 0 <= lin_intencao < 29 and \
+                        self.matriz[lin_intencao][col_intencao] != 2:
                     movivel.aceitar_movimento()
                     if isinstance(movivel, Pacman) and self.matriz[lin][col] == 1:
                         self.pontos += 1
                         self.matriz[lin][col] = 0
                         if self.pontos >= 306:
                             self.estado = 3
-
                 else:
                     movivel.recusar_movimento(direcoes)
-
-    def calcular_regras_pausado(self):
-        pass
-
-    def calcular_regras_gameover(self):
-        pass
 
     def processar_eventos(self, evts):
         for e in evts:
@@ -217,6 +226,8 @@ class Pacman(ElementoJogo, Movivel):
         self.raio = self.tamanho // 2
         self.coluna_intencao = self.coluna
         self.linha_intencao = self.linha
+        self.abertura = 0
+        self.velocidade_abertura = 1
 
     def calcular_regras(self):
         self.coluna_intencao = self.coluna + self.vel_x
@@ -228,10 +239,16 @@ class Pacman(ElementoJogo, Movivel):
         # Desenhar o corpo do Pacman
         pygame.draw.circle(tela, AMARELO, (self.centro_x, self.centro_y), self.raio, 0)
 
+        self.abertura += self.velocidade_abertura
+        if self.abertura > self.raio:
+            self.velocidade_abertura = -1
+        if self.abertura <= 0:
+            self.velocidade_abertura = 1
+
         # Desenho da boca do Pacman
         canto_boca = (self.centro_x, self.centro_y)
-        labio_superior = (self.centro_x + self.raio, self.centro_y - self.raio)
-        labio_inferior = (self.centro_x + self.raio, self.centro_y)
+        labio_superior = (self.centro_x + self.raio, self.centro_y - self.abertura)
+        labio_inferior = (self.centro_x + self.raio, self.centro_y + self.abertura)
         pontos = [canto_boca, labio_superior, labio_inferior]
         pygame.draw.polygon(tela, PRETO, pontos, 0)
 
@@ -290,8 +307,8 @@ class Fantasma(ElementoJogo):
         px = int(self.coluna * self.tamanho)
         py = int(self.linha * self.tamanho)
         contorno = [(px, py + self.tamanho),
-                    (px + fatia , py + fatia * 2),
-                    (px + fatia * 3, py + fatia // 2),
+                    (px + fatia, py + fatia * 2),
+                    (px + fatia * 2, py + fatia // 2),
                     (px + fatia * 3, py),
                     (px + fatia * 5, py),
                     (px + fatia * 6, py + fatia // 2),
@@ -314,13 +331,13 @@ class Fantasma(ElementoJogo):
         pygame.draw.circle(tela, PRETO, (olho_d_x, olho_d_y), olho_raio_int, 0)
 
     def calcular_regras(self):
-        if self.direcao == ACMIMA:
+        if self.direcao == ACIMA:
             self.linha_intencao -= self.velocidade
-        if self.direcao == ABAIXO:
+        elif self.direcao == ABAIXO:
             self.linha_intencao += self.velocidade
-        if self.direcao == ESQUERDA:
+        elif self.direcao == ESQUERDA:
             self.coluna_intencao -= self.velocidade
-        if self.direcao == DIREITA:
+        elif self.direcao == DIREITA:
             self.coluna_intencao += self.velocidade
 
     def mudar_direcao(self, direcoes):
@@ -350,11 +367,12 @@ if __name__ == "__main__":
     clyde = Fantasma(LARANJA, size)
     pinky = Fantasma(ROSA, size)
     cenario = Cenario(size, pacman)
+    cenario.adicionar_movivel(pacman)
     cenario.adicionar_movivel(blinky)
     cenario.adicionar_movivel(inky)
     cenario.adicionar_movivel(clyde)
     cenario.adicionar_movivel(pinky)
-    cenario.adicionar_movivel(pacman)
+
 
     while True:
         # Calcular as regras
@@ -373,10 +391,10 @@ if __name__ == "__main__":
         inky.pintar(screen)
         clyde.pintar(screen)
         pinky.pintar(screen)
+        pygame.display.update()
+        pygame.time.delay(100)
 
         # Captura os eventos
         eventos = pygame.event.get()
-        cenario.processar_eventos(eventos)
         pacman.processar_eventos(eventos)
-        pygame.display.update()
-        pygame.time.delay(100)
+        cenario.processar_eventos(eventos)
